@@ -7,8 +7,12 @@ CODEC = codec
 EXAMPLES = examples
 SYMBOL_DETECTOR = symbol_detector
 
-all: $(CODEC) $(EXAMPLES) $(SYMBOL_DETECTOR)
-
+#all: $(CODEC) $(EXAMPLES) $(SYMBOL_DETECTOR)
+all:
+	cd $(CODEC) && $(MAKE)
+	cd $(SYMBOL_DETECTOR) && $(MAKE)
+	cd $(EXAMPLES) && $(MAKE)
+	
 $(CODEC): $(CODEC)/codec.h $(CODEC)/codec.cpp
 	cd $(CODEC) && $(MAKE)
 

@@ -26,7 +26,7 @@ SymbolDecoder::SymbolDecoder(int bps)
 	int N = (int)pow(2,bps) + 1;
 	
 	m_bps = bps; // save bps value
-	m_prev_sym = 0; // initialize previous symbol holder
+	m_prev_sym = -1; // indicate no previous symbol has been given
 	
 	// create state-machine matrix
 	m_state = new int*[N];
@@ -74,12 +74,30 @@ SymbolDecoder::~SymbolDecoder(void)
  *
  * @param[in]  input  The next symbol in the sequence.
  * @param[out] output The target bit-stream
+ * 
+ * @return True if a new bit was generated. False otherwise.
  */
 
-void SymbolDecoder::push(const int input, vector<bool> &output)
+bool SymbolDecoder::push(const int input, vector<bool> &output)
 {
-	value2bitstream(m_state[m_prev_sym][input],m_bps,output);
-	m_prev_sym = input;
+	if(m_prev_sym == -1)
+	{
+		// the first symbol has been pushed into the state-machine
+		m_prev_sym = input;
+	}
+	
+	else if(m_prev_sym != input)
+	{
+		value2bitstream(m_state[m_prev_sym][input],m_bps,output);
+		m_prev_sym = input;
+		return true;
+	}
+	
+	else
+	{
+		// a new symbol hasn't been given, yet
+		return false;
+	}
 }
 
 /**

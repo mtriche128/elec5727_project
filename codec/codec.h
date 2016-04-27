@@ -24,11 +24,34 @@ public:
 	SymbolDecoder(int bps);
 	~SymbolDecoder(void);
 
-	void push(const int input, vector<bool> &output);
+	bool push(const int input, vector<bool> &output);
 	
 private:
 	
 	void value2bitstream(const int value, const int bits, vector<bool> &stream);
+ 	
+	int m_bps;   // bits-per-symbol 
+	int **m_state; // state-machine
+	int m_prev_sym;
+};
+
+/**
+ * @brief The symbol encoder.
+ * 
+ * This class can encode a symbol sequence into a bit-stream.
+ */
+
+class SymbolEncoder
+{
+public:
+	SymbolEncoder(int bps);
+	~SymbolEncoder(void);
+
+	int push(vector<bool> &input);
+	
+private:
+	
+	int bitstream2value(const int bits, vector<bool> &stream);
  	
 	int m_bps;   // bits-per-symbol 
 	int **m_state; // state-machine

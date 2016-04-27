@@ -4,10 +4,10 @@ using namespace std;
 
 int main(void)
 {
-	SymbolDecoder decoder(1); // initialize 1 bps decoder
+	SymbolDecoder decoder(1); // initialize a 1 bit-per-symbol decoder
 	vector<bool> bitstream;
 	
-	// initialize symbol is '0'
+	decoder.push(0,bitstream);
 	decoder.push(1,bitstream);
 	decoder.push(2,bitstream);
 	decoder.push(1,bitstream);
