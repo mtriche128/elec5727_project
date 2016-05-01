@@ -4,18 +4,22 @@ using namespace std;
 
 int main(void)
 {
-	SymbolDecoder decoder(1); // initialize a 1 bit-per-symbol decoder
-	vector<bool> bitstream;
+	SymbolDecoder decoder(2); // initialize a 1 bit-per-symbol decoder
+	queue<bool> bitqueue;
 	
-	decoder.push(0,bitstream);
-	decoder.push(1,bitstream);
-	decoder.push(2,bitstream);
-	decoder.push(1,bitstream);
-	decoder.push(0,bitstream);
+	decoder.push(0,bitqueue);
+	decoder.push(1,bitqueue);
+	decoder.push(2,bitqueue);
+	decoder.push(3,bitqueue);
+	decoder.push(4,bitqueue);
+	decoder.push(3,bitqueue);
+	decoder.push(2,bitqueue);
+	decoder.push(1,bitqueue);
+	decoder.push(0,bitqueue);
 	
-	for(int i = 0; i < bitstream.size(); i++)
+	while(!bitqueue.empty())
 	{
-		if(bitstream[i])
+		if(bitqueue.front())
 		{
 			cout << "1 ";
 		}
@@ -24,6 +28,8 @@ int main(void)
 		{
 			cout << "0 ";
 		}
+		
+		bitqueue.pop();
 	}
 		
 	cout << endl;

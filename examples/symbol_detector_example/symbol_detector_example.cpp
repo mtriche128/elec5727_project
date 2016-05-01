@@ -29,7 +29,7 @@ int main(void)
 		vector<Marker> markers;
 		cap >> frame;
 		
-		sym_det.ProcessFrame(frame, markers);
+		sym_det.push(frame, markers);
 		
 		int y = (markers.size()-1)/3+1;
 		int marker_size =48;

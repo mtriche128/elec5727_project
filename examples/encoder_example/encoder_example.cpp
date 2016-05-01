@@ -4,13 +4,26 @@ using namespace std;
 
 int main(void)
 {
-	SymbolEncoder encoder(1,0); // initialize a 1 bit-per-symbol decoder
+	SymbolEncoder encoder(2,0); // initialize a 1 bit-per-symbol decoder
 	queue<bool> bitqueue;
 	queue<int> symqueue;
 	
 	bitqueue.push(0);
+	bitqueue.push(0);
+	bitqueue.push(0);
 	bitqueue.push(1);
 	bitqueue.push(1);
+	bitqueue.push(0);
+	bitqueue.push(1);
+	bitqueue.push(1);
+	bitqueue.push(1);
+	bitqueue.push(1);
+	bitqueue.push(1);
+	bitqueue.push(0);
+	bitqueue.push(0);
+	bitqueue.push(1);
+	bitqueue.push(0);
+	bitqueue.push(0);
 	
 	encoder.push(bitqueue,symqueue);
 	

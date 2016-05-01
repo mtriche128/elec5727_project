@@ -6,6 +6,7 @@ MAKE = make
 CODEC = codec
 EXAMPLES = examples
 SYMBOL_DETECTOR = symbol_detector
+LIB = lib
 
 #all: $(CODEC) $(EXAMPLES) $(SYMBOL_DETECTOR)
 all:
@@ -24,6 +25,9 @@ $(EXAMPLES): $(EXAMPLES)/decoder_example/decoder_example.cpp \
              $(EXAMPLES)/symbol_detector_example/symbol_detector_example.cpp
 	cd $(EXAMPLES)/decoder_example && $(MAKE)
 	cd $(EXAMPLES)/symbol_detector_example && $(MAKE)
-	
+
+$(LIB): $(LIB)/tochee/tochee.cpp
+	cd $(LIB) && $(MAKE)
+
 touch_all:
 	find . -exec touch {} \;

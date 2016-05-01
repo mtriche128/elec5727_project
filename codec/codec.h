@@ -4,8 +4,9 @@
  * @brief Header file for the symbol codec.
  *
  *****************************************************************************/
- 
-#include <vector>
+
+#include <iostream>
+#include <queue>
 #include <stdint.h>
 using namespace std;
 
@@ -13,49 +14,63 @@ using namespace std;
 #define _CODEC_H
 
 /**
- * @brief The symbol decoder.
+ * @brief The symbol codec base class.
  * 
- * This class can decode a symbol sequence into a bit-stream.
+ * This codec base class constructor shall generate the state-machine matrix.
  */
 
-class SymbolDecoder
+class CodecBase
+{
+public:
+	CodecBase(int bps);
+	~CodecBase();
+	
+protected:
+	int m_bps;       // bits-per-symbol 
+	int **m_state;   // state-machine
+	int m_prev_sym;  // previous symbol given
+	int m_state_dim; // dimension of the state-machine matrix
+};
+
+/**
+ * @brief The symbol decoder.
+ * 
+ * This class can decode a symbol sequence into a bit-queue.
+ */
+
+class SymbolDecoder : public CodecBase
 {
 public:
 	SymbolDecoder(int bps);
-	~SymbolDecoder(void);
+	~SymbolDecoder(void) { };
 
-	bool push(const int input, vector<bool> &output);
+	bool push(const int input, queue<bool> &output);
 	
 private:
 	
-	void value2bitstream(const int value, const int bits, vector<bool> &stream);
- 	
-	int m_bps;   // bits-per-symbol 
-	int **m_state; // state-machine
-	int m_prev_sym;
+	void value2bitqueue(const int value, const int bits, queue<bool> &bq);
 };
 
 /**
  * @brief The symbol encoder.
  * 
- * This class can encode a symbol sequence into a bit-stream.
+ * This class can encode a bit-queue into a symbol-queue.
  */
 
-class SymbolEncoder
+class SymbolEncoder : public CodecBase
 {
 public:
-	SymbolEncoder(int bps);
-	~SymbolEncoder(void);
+	SymbolEncoder(int bps, int init);
+	~SymbolEncoder(void) { };
 
-	int push(vector<bool> &input);
+	int push(queue<bool> &input, queue<int> &output);
 	
 private:
 	
-	int bitstream2value(const int bits, vector<bool> &stream);
- 	
-	int m_bps;   // bits-per-symbol 
-	int **m_state; // state-machine
-	int m_prev_sym;
+	int bitqueue2value(const int bits, queue<bool> &bq);
+	
+	int m_init; // initial symbol generated
+	queue<bool> m_queue; // persistent bit-queue
 };
 
 #endif

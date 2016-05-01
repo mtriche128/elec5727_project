@@ -1,11 +1,25 @@
 /**************************************************************************//**
-* 
-* @file  symbol_detector.cpp
-* @brief The symbol detection kernel.
-* 
-* The symbol detector is designed to read in image frames and output whatever
-* target symbols may be present within.
-*
+ * 
+ * @file  symbol_detector.cpp
+ * @brief The symbol detection kernel.
+ * 
+ * The symbol detector is designed to read in image frames and output whatever
+ * target symbols may be present within.
+ * 
+ * CITATION:
+ * This code is derived from Skyler Saleh's "Fiducial Based Visual Servoing"
+ * software. 
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to 
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or 
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
  ******************************************************************************/
  
 #include <vector>
@@ -59,19 +73,6 @@ void Marker::calc_number(void) {
 }
 
 /**
- * @brief Constructor.
- * 
- * @param[in] m Intrisic camera matrix.
- * @param[in] d Distoration coefficients.
- */
-
-SymbolDetector::SymbolDetector(const Mat &m, const Mat &d)
-{
-	int_mat    = m.clone(); // create deep copy of intrinsic matrix
-	dist_coeff = d.clone(); // create deep copy on distortion coefficients
-}
-
-/**
  * @brief Destructor.
  */
 
@@ -81,15 +82,15 @@ SymbolDetector::~SymbolDetector(void)
 }
 
 /**
- * @brief Process an image frame.
+ * @brief Push an image frame into the symbol detector.
  * 
  * @param[in]  input  The image frame.
  * @param[out] output The list of detected symbols.
  */
 
-void SymbolDetector::ProcessFrame(const Mat &input, vector<Marker> &output)
+void SymbolDetector::push(const Mat &input, vector<Marker> &output)
 {
-	int marker_size =48;
+	int marker_size = 48;
 	cv::Mat im_res = input.clone();
 	
 	cv::Mat im_gray;

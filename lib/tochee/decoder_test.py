@@ -29,7 +29,7 @@ while(1):
 	cv2.imshow('output',frame)
 	
 	if len(symbol_list) == 1:
-		ti.decoder_push(symbol_list[0].value)
+		ti.decoder_write(symbol_list[0].value)
 	
 	data = ti.decoder_read(1)
 	
