@@ -1,4 +1,5 @@
 from ctypes import *
+import array
 import os
 
 MAX_SYMBOL_LIST = 128
@@ -29,16 +30,22 @@ class Tochee:
 		lib_filename = os.getcwd() + "/libtochee.so"
 		self.lib = cdll.LoadLibrary(lib_filename) # create handle to libtochee.so
 		
-		self.lib.lib_init.argtypes     = [c_int]
-		self.lib.symdet_push.argtypes  = [c_void_p, c_int, c_int, POINTER(c_symbol)]
-		self.lib.decoder_push.argtypes = [c_int]
-		self.lib.decoder_read.argtypes = [c_void_p, c_int]
+		# set arguments passed to each function call within the library
+		self.lib.lib_init.argtypes      = [c_int]
+		self.lib.symdet_push.argtypes   = [c_void_p, c_int, c_int, POINTER(c_symbol)]
+		self.lib.decoder_write.argtypes = [c_int]
+		self.lib.decoder_read.argtypes  = [c_void_p, c_int]
+		self.lib.encoder_write.argtypes = [c_void_p, c_int]
+		self.lib.encoder_read.argtypes  = [c_void_p, c_int]
 		
-		self.lib.symdet_push.restype   = c_int
-		self.lib.decoder_push.restypes = c_int
-		self.lib.decoder_size.restypes = c_int
-		self.lib.decoder_read.restypes = c_int
-	
+		# set the return type of each funtion within the library
+		self.lib.symdet_push.restype     = c_int
+		self.lib.decoder_write.restypes  = c_int
+		self.lib.decoder_size.restypes   = c_int
+		self.lib.decoder_read.restypes   = c_int
+		self.lib.encoder_write.restypes  = c_int
+		self.lib.encoder_read.restypes   = c_int
+		
 		self.lib.lib_init(_bps) # initialize the library
 		
 	# ---------------------------------------------------------------------
@@ -86,10 +93,10 @@ class Tochee:
 	# Return Value:
 	# True if bits were generated. False otherwise.
 	
-	def decoder_push(self, sym):
+	def decoder_write(self, sym):
 		if sym >= self.sym_num:
 			return # erronious symbol given
-		if self.lib.decoder_push(sym) == 1:
+		if self.lib.decoder_write(sym) == 1:
 			return True
 		else:
 			return False
@@ -121,6 +128,40 @@ class Tochee:
 	
 	def decoder_read(self,n):
 		buff = (c_ubyte*n)() # create buffer
-		ptr = cast(pointer(buff),POINTER(c_void_p)) # aquire a pointer to the symbol array
+		ptr = cast(pointer(buff),POINTER(c_void_p)) # aquire a pointer to the byte array
 		N = self.lib.decoder_read(ptr, n)
 		return buff[0:N]
+	
+		
+	# ---------------------------------------------------------------------
+	# encoder_write
+	#
+	# Write data to the encoder.
+	#
+	# Parameters:
+	# data - A list containing the data. It must contain byte values, only.
+	#
+	# Return Value:
+	# The list of bytes read.
+	
+	def encoder_write(self,data):
+		buff = array.array('B', data)
+		addr, size = buff.buffer_info()
+		return self.lib.encoder_write(addr, size)
+		
+	# ---------------------------------------------------------------------
+	# encoder_read
+	#
+	# Read symbols from the encoder.
+	#
+	# Parameters:
+	# n - The number of symbols to try reading.
+	#
+	# Return Value:
+	# The list of symbols read.
+	
+	def encoder_read(self,n):
+		symbols = (c_ubyte*MAX_SYMBOL_LIST)()
+		ptr = cast(pointer(symbols),POINTER(c_void_p)) # aquire a pointer to the symbol array
+		N = self.lib.encoder_read(ptr,n)
+		return symbols[0:N]
