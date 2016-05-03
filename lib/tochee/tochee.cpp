@@ -195,7 +195,7 @@ _export int decoder_read(void *buff, int size)
 	while( (bitqueue.size() >= 8) && (count < size) )
 	{
 		b = 0; // initialize byte value to zero
-		int i = 5; // the number of bits within each byte
+		int i = 8; // the number of bits within each byte
 		while(i--)
 		{
 			b = b << 1; // shift byte left 1 bit pos

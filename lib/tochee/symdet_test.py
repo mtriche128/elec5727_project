@@ -1,14 +1,27 @@
 import numpy as np
 import cv2
+import cv2.cv as cv
 import tochee
 
 ti = tochee.Tochee(1) # create a comms interface a 1 bit-per-symbol
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 
+cap.set(cv.CV_CAP_PROP_FRAME_WIDTH, 800)
+cap.set(cv.CV_CAP_PROP_FRAME_HEIGHT,600)
+#cap.set(cv.CV_CAP_PROP_FPS, 1) 
+frame_width  = cap.get(cv.CV_CAP_PROP_FRAME_WIDTH)
+frame_height = cap.get(cv.CV_CAP_PROP_FRAME_HEIGHT)
+fps          = cap.get(cv.CV_CAP_PROP_FPS)
+fourcc       = cap.get(cv.CV_CAP_PROP_FOURCC)
+	
+print("Resolution : %ix%i" % (frame_width,frame_height))
+print("FPS        : %i" % fps)
+print("FOURCC     : %s" % str(fourcc))
+	
 while(1):
 	ret, frame = cap.read()
-	
+
 	symbol_list = ti.symdet_push(frame)
 	
 	for sym in symbol_list:
