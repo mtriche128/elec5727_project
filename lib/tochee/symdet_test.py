@@ -5,7 +5,7 @@ import tochee
 
 ti = tochee.Tochee(1) # create a comms interface a 1 bit-per-symbol
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 cap.set(cv.CV_CAP_PROP_FRAME_WIDTH, 800)
 cap.set(cv.CV_CAP_PROP_FRAME_HEIGHT,600)
