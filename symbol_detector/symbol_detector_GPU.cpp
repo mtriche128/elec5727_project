@@ -24,6 +24,7 @@
  
 #include <vector>
 #include <opencv2/opencv.hpp>
+#include <opencv2/gpu/gpu.hpp>
 #include "symbol_detector.h"
 #include "features.h"
 using namespace std;
@@ -76,7 +77,7 @@ void Marker::calc_number(void) {
  * @brief Destructor.
  */
 
-SymbolDetector::~SymbolDetector(void)
+SymbolDetectorGPU::~SymbolDetectorGPU(void)
 {
 	// Do nothing for now.
 }
@@ -87,22 +88,40 @@ SymbolDetector::~SymbolDetector(void)
  * @param[in]  input  The image frame.
  * @param[out] output The list of detected symbols.
  */
-
-void SymbolDetector::push(const Mat &input, vector<Marker> &output)
+void SymbolDetectorGPU::push(const Mat &input, vector<Marker> &output)
 {
+	// Initialize first available GPU
+	cv.gpu.setDevice(0)
+	
 	int marker_size = 48;
 	//cv::Mat im_res = input.clone();
 	
-	cv::Mat im_gray;
-	cvtColor(input,im_gray,CV_RGB2GRAY);
-	cv::normalize(im_gray,im_gray,0,255,cv::NORM_MINMAX, CV_8UC3);
+	//--------GPU Start----------
+	// upload image to GPU
+	cv::GpuMat gpu_input
+	gpu_input.upload(input)
 	
-	cv::Mat im_thresh;
-	cv::threshold(im_gray,im_thresh,128,255,cv::THRESH_BINARY);
+	/*cv::Mat im_gray;*/
+	cv::GpuMat im_gray
+	
+	/*cvtColor(input,im_gray,CV_RGB2GRAY);*/
+	cv::gpu::cvtColor(gpu_input,im_gray,CV_RGB2GRAY);
+		
+	/*cv::normalize(im_gray,im_gray,0,255,cv::NORM_MINMAX, CV_8UC3);*/
+	cv::gpu::normalize(im_gray,im_gray,0,255,cv::NORM_MINMAX, CV_8UC3);
+	
+	/*cv::Mat im_thresh;*/
+	cv::GpuMat gpu_im_thresh;
+	cv::gpu::threshold(im_gray,gpu_im_thresh,128,255,cv::THRESH_BINARY);
 	
 	// BOUNDRY: out_ims = im_thresh;
 	// ----------------------------------------------------------------------
 	// Find Contours
+	
+	// Pull off the CPU
+	cv::Mat im_thresh;
+	gpu_im_thresh.download(im_thresh)
+	//--------GPU End----------	
 	
 	std::vector<std::vector<cv::Point> > contours;
 	cv::findContours(im_thresh.clone(), contours, CV_RETR_LIST,CV_CHAIN_APPROX_TC89_L1);
@@ -115,7 +134,7 @@ void SymbolDetector::push(const Mat &input, vector<Marker> &output)
 	
 	std::vector<cv::Point> approx;
 	std::vector<Marker> markers;
-	
+	//TODO: GPU Accelerator candidate
 	for (int i = 0; i < contours.size(); i++){
 		cv::approxPolyDP(
 			cv::Mat(contours[i]),
@@ -139,14 +158,29 @@ void SymbolDetector::push(const Mat &input, vector<Marker> &output)
 		cv::Size zeroZone( -1, -1 );
 		cv::TermCriteria criteria = cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 50, 0.0001 );
 		
+		//TODO: Definite mulicore Accelerator candidate
 		for(int i=0;i<4;++i){square_to[i]=approx[i];}
 		/// Calculate the refined corner locations
 		cv::cornerSubPix( im_gray, square_to, winSize, zeroZone, criteria );
 		
 		cv::Mat affine = cv::getPerspectiveTransform(square_to,square_match);
+		
+		//--------GPU Start----------
+		// upload to GPU
+		cv::GpuMat gpu_affine
+		gpu_affine.upload(gpu_affine)
+		
+		cv::GpuMat gpu_normalized;
+		/*cv::warpPerspective(input,gpu_normalized,affine,cv::Size2f(marker_size ,marker_size ));*/
+		cv::warpPerspective(gpu_input,gpu_normalized,gpu_affine,cv::Size2f(marker_size ,marker_size ));
+		cv::normalize(gpu_normalized,gpu_normalized,0,255,cv::NORM_MINMAX, CV_8UC3);
+		
+		// download from GPU
 		cv::Mat normalized;
-		cv::warpPerspective(input,normalized,affine,cv::Size2f(marker_size ,marker_size ));
-		cv::normalize(normalized,normalized,0,255,cv::NORM_MINMAX, CV_8UC3);
+		gpu_normalized.download(normalized)
+		gpu_affine.download(affine)
+		//--------GPU End----------	
+		
 		Marker m;
 		m.normalized=normalized;
 		m.affine = affine;
@@ -192,8 +226,23 @@ void SymbolDetector::push(const Mat &input, vector<Marker> &output)
 		std::vector<cv::Point2f> corners;
 		cv::Mat mark_gray;
 		
-		cvtColor(m.normalized,mark_gray,CV_RGB2GRAY);
-		cv::goodFeaturesToTrack(mark_gray,corners,4,0.03,10);
+		//--------GPU Start----------
+		// upload to GPU
+		//normalized already on GPU
+		cv::GpuMat gpu_mark_gray
+		gpu_mark_gray.upload(mark_gray)
+		cv::GpuMat gpu_corners
+		gpu_corners.upload(corners)
+		
+		/* cvtColor(m.normalized,gpu_mark_gray,CV_RGB2GRAY);
+		cv::goodFeaturesToTrack(gpu_mark_gray,gpu_corners,4,0.03,10); */
+		cv::gpu::cvtColor(m.normalized,gpu_mark_gray,CV_RGB2GRAY);
+		cv::gpu::goodFeaturesToTrack(gpu_mark_gray,gpu_corners,4,0.03,10);
+		// download from GPU
+		gpu_corners.download(corners)
+		gpu_mark_gray.download(mark_gray)
+		//--------GPU End----------	
+		
 		if(corners.size()==0)continue;
 		/// Set the needed parameters to find the refined corners
 		cv::Size winSize( 1, 1 );
@@ -205,6 +254,7 @@ void SymbolDetector::push(const Mat &input, vector<Marker> &output)
 		double best_error =1e100;
 		cv::Point2f center;
 		
+		//TODO: Multicore Accelerate
 		for(int i=0;i<corners.size();++i){
 			double error = fabs(corners[i].x-marker_size*0.5)+fabs(corners[i].y-marker_size*0.5);
 			if(error<best_error){
@@ -234,6 +284,7 @@ void SymbolDetector::push(const Mat &input, vector<Marker> &output)
 				));
 		}
 		
+		//TODO: Multicore Accelerator candidate
 		for(int p=0;p<petal_locs.size();++p){
 			int type = id_petal(mark_gray,petal_locs[p]);
 			m.petal_vals[p]=type;
@@ -306,64 +357,6 @@ void SymbolDetector::push(const Mat &input, vector<Marker> &output)
 			};
 			
 			output = markers;
-
-			/* 
-			//markers[i].res.copyTo(marker_res(cv::Rect(xp*marker_size ,yp*marker_size ,marker_size ,marker_size )));
-			marker_res(cv::Rect(xp*marker_size ,yp*marker_size ,marker_size ,marker_size )) = markers[i].res.clone();
-			
-			std::vector<cv::Point> approx = markers[i].contour;
-			for(int i=0;i<approx.size()-1;++i){
-				cv::line(im_res,approx[i],approx[i+1],cv::Scalar(0,0,255),3);
-			}
-
-			cv::line(im_res,approx[0],approx[approx.size()-1],cv::Scalar(0,0,255),3);
-			cv::circle(im_res,markers[i].center,2,cv::Scalar(0,255,0),1);
-			cv::line(im_res,markers[i].center,markers[i].top,cv::Scalar(0,255,0),3);
-			
-			cv::line(im_res,approx[0],approx[2],cv::Scalar(0,255,255),1);
-			cv::line(im_res,approx[1],approx[3],cv::Scalar(0,255,255),1);
-			
-			std::stringstream str;
-			str.precision(4);
-			
-			cv::Mat rvec,tvec;
-			std::vector<cv::Point2f> pts =markers[i].float_contour;
-			cv::solvePnP(object_points,pts,m1,d1,rvec,tvec,false,CV_P3P);
-			
-			str<<markers[i].number;
-			cv::putText(im_res,str.str(),markers[i].center,cv::FONT_HERSHEY_SIMPLEX,0.5,cv::Scalar(255,255,255),3);
-			cv::putText(im_res,str.str(),markers[i].center,cv::FONT_HERSHEY_SIMPLEX,0.5,cv::Scalar(255,100,0),2);
-			
-			str.str("");
-			str<<tvec.at<double>(0);
-			cv::putText(im_res,str.str(),cv::Point(markers[i].center.x,markers[i].center.y+20),cv::FONT_HERSHEY_SIMPLEX,0.5,cv::Scalar(255,255,255),3);
-			cv::putText(im_res,str.str(),cv::Point(markers[i].center.x,markers[i].center.y+20),cv::FONT_HERSHEY_SIMPLEX,0.5,cv::Scalar(255,100,0),2);
-			
-			str.str("");
-			str<<tvec.at<double>(1);
-			cv::putText(im_res,str.str(),cv::Point(markers[i].center.x,markers[i].center.y+40),cv::FONT_HERSHEY_SIMPLEX,0.5,cv::Scalar(255,255,255),3);
-			cv::putText(im_res,str.str(),cv::Point(markers[i].center.x,markers[i].center.y+40),cv::FONT_HERSHEY_SIMPLEX,0.5,cv::Scalar(255,100,0),2);
-			
-			str.str("");
-			str<<tvec.at<double>(2);
-			cv::putText(im_res,str.str(),cv::Point(markers[i].center.x,markers[i].center.y+60),cv::FONT_HERSHEY_SIMPLEX,0.5,cv::Scalar(255,255,255),3);
-			cv::putText(im_res,str.str(),cv::Point(markers[i].center.x,markers[i].center.y+60),cv::FONT_HERSHEY_SIMPLEX,0.5,cv::Scalar(255,100,0),2);
-			
-			str.str("");
-			str<<rvec.at<double>(0)*180/(3.14159265359);
-			cv::putText(im_res,str.str(),cv::Point(markers[i].center.x,markers[i].center.y+80),cv::FONT_HERSHEY_SIMPLEX,0.5,cv::Scalar(255,255,255),3);
-			cv::putText(im_res,str.str(),cv::Point(markers[i].center.x,markers[i].center.y+80),cv::FONT_HERSHEY_SIMPLEX,0.5,cv::Scalar(255,100,0),2);
-			
-			str.str("");
-			str<<rvec.at<double>(1)*180/(3.14159265359);
-			cv::putText(im_res,str.str(),cv::Point(markers[i].center.x,markers[i].center.y+100),cv::FONT_HERSHEY_SIMPLEX,0.5,cv::Scalar(255,255,255),3);
-			cv::putText(im_res,str.str(),cv::Point(markers[i].center.x,markers[i].center.y+100),cv::FONT_HERSHEY_SIMPLEX,0.5,cv::Scalar(255,100,0),2);
-			
-			str.str("");
-			str<<rvec.at<double>(2)*180/(3.14159265359);
-			cv::putText(im_res,str.str(),cv::Point(markers[i].center.x,markers[i].center.y+120),cv::FONT_HERSHEY_SIMPLEX,0.5,cv::Scalar(255,255,255),3);
-			cv::putText(im_res,str.str(),cv::Point(markers[i].center.x,markers[i].center.y+120),cv::FONT_HERSHEY_SIMPLEX,0.5,cv::Scalar(255,100,0),2);
-			*/
 		}
 	}
 }
