@@ -25,7 +25,7 @@
 #include <vector>
 #include <opencv2/opencv.hpp>
 #include <opencv2/gpu/gpu.hpp>
-#include "symbol_detector.h"
+#include "symbol_detector_GPU.h"
 #include "features.h"
 using namespace std;
 using namespace cv;
@@ -91,18 +91,18 @@ SymbolDetectorGPU::~SymbolDetectorGPU(void)
 void SymbolDetectorGPU::push(const Mat &input, vector<Marker> &output)
 {
 	// Initialize first available GPU
-	cv.gpu.setDevice(0)
+	cv::gpu::setDevice(0);
 	
 	int marker_size = 48;
 	//cv::Mat im_res = input.clone();
 	
 	//--------GPU Start----------
 	// upload image to GPU
-	cv::GpuMat gpu_input
-	gpu_input.upload(input)
+	cv::gpu::GpuMat gpu_input;
+	gpu_input.upload(input);
 	
 	/*cv::Mat im_gray;*/
-	cv::GpuMat im_gray
+	cv::gpu::GpuMat im_gray;
 	
 	/*cvtColor(input,im_gray,CV_RGB2GRAY);*/
 	cv::gpu::cvtColor(gpu_input,im_gray,CV_RGB2GRAY);
@@ -111,7 +111,7 @@ void SymbolDetectorGPU::push(const Mat &input, vector<Marker> &output)
 	cv::gpu::normalize(im_gray,im_gray,0,255,cv::NORM_MINMAX, CV_8UC3);
 	
 	/*cv::Mat im_thresh;*/
-	cv::GpuMat gpu_im_thresh;
+	cv::gpu::GpuMat gpu_im_thresh;
 	cv::gpu::threshold(im_gray,gpu_im_thresh,128,255,cv::THRESH_BINARY);
 	
 	// BOUNDRY: out_ims = im_thresh;
@@ -120,7 +120,7 @@ void SymbolDetectorGPU::push(const Mat &input, vector<Marker> &output)
 	
 	// Pull off the CPU
 	cv::Mat im_thresh;
-	gpu_im_thresh.download(im_thresh)
+	gpu_im_thresh.download(im_thresh);
 	//--------GPU End----------	
 	
 	std::vector<std::vector<cv::Point> > contours;
@@ -167,18 +167,15 @@ void SymbolDetectorGPU::push(const Mat &input, vector<Marker> &output)
 		
 		//--------GPU Start----------
 		// upload to GPU
-		cv::GpuMat gpu_affine
-		gpu_affine.upload(gpu_affine)
+		cv::gpu::GpuMat gpu_normalized;
 		
-		cv::GpuMat gpu_normalized;
-		/*cv::warpPerspective(input,gpu_normalized,affine,cv::Size2f(marker_size ,marker_size ));*/
-		cv::warpPerspective(gpu_input,gpu_normalized,gpu_affine,cv::Size2f(marker_size ,marker_size ));
-		cv::normalize(gpu_normalized,gpu_normalized,0,255,cv::NORM_MINMAX, CV_8UC3);
+		/*cv::warpPerspective(input,normalized,affine,cv::Size2f(marker_size ,marker_size ));*/
+		cv::gpu::warpPerspective(gpu_input,gpu_normalized,affine,cv::Size2f(marker_size ,marker_size ));
+		cv::gpu::normalize(gpu_normalized,gpu_normalized,0,255,cv::NORM_MINMAX, CV_8UC3);
 		
 		// download from GPU
 		cv::Mat normalized;
-		gpu_normalized.download(normalized)
-		gpu_affine.download(affine)
+		gpu_normalized.download(normalized);
 		//--------GPU End----------	
 		
 		Marker m;
@@ -224,23 +221,34 @@ void SymbolDetectorGPU::push(const Mat &input, vector<Marker> &output)
 	for(auto&m : markers){
 		m.res=m.normalized;
 		std::vector<cv::Point2f> corners;
+		cv::Mat corners_mat;
 		cv::Mat mark_gray;
 		
 		//--------GPU Start----------
 		// upload to GPU
 		//normalized already on GPU
-		cv::GpuMat gpu_mark_gray
-		gpu_mark_gray.upload(mark_gray)
-		cv::GpuMat gpu_corners
-		gpu_corners.upload(corners)
+		cv::gpu::GpuMat gpu_mark_gray;
+		gpu_mark_gray.upload(mark_gray);
+		cv::gpu::GpuMat gpu_normalized;
+		gpu_normalized.upload(m.res);
 		
-		/* cvtColor(m.normalized,gpu_mark_gray,CV_RGB2GRAY);
-		cv::goodFeaturesToTrack(gpu_mark_gray,gpu_corners,4,0.03,10); */
-		cv::gpu::cvtColor(m.normalized,gpu_mark_gray,CV_RGB2GRAY);
-		cv::gpu::goodFeaturesToTrack(gpu_mark_gray,gpu_corners,4,0.03,10);
+		cv::gpu::GpuMat gpu_corners;
+		gpu_corners.upload(corners_mat);
+		
+		//cvtColor(m.normalized,mark_gray,CV_RGB2GRAY);
+		//cv::goodFeaturesToTrack(mark_gray,corners,4,0.03,10);
+		cv::gpu::cvtColor(gpu_normalized,gpu_mark_gray,CV_RGB2GRAY);
+		//cv::gpu::GoodFeaturesToTrackDetector_GPU(gpu_mark_gray,gpu_corners,4,0.03,10);
+
+		// Mask not defined. Potential problem area. Check back here if you get poor results. 
+		cv::gpu::GoodFeaturesToTrackDetector_GPU corner_detect(4,0.03,10);
+		corner_detect(gpu_mark_gray,gpu_corners);
+
 		// download from GPU
-		gpu_corners.download(corners)
-		gpu_mark_gray.download(mark_gray)
+		gpu_corners.download(corners_mat);
+		gpu_mark_gray.download(mark_gray);
+
+		corners = corners_mat;
 		//--------GPU End----------	
 		
 		if(corners.size()==0)continue;
