@@ -1,3 +1,0 @@
-#!/bin/bash
-cp ../lib/tochee/libtochee.so ./
-cp ../lib/tochee/tochee.py ./

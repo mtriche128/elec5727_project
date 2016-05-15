@@ -4,7 +4,7 @@
 # -----------------------------------------------------------------------------
 
 import argparse
-import tochee
+import tochee_gpu
 import numpy as np
 import cv2
 import time
@@ -30,7 +30,7 @@ print("process type     : %s" % process_type)
 # -----------------------------------------------------------------------------
 # Initialize and execute image processing.
 
-ti = tochee.Tochee(5) # initialize tochee interface
+ti = tochee_gpu.Tochee(2) # initialize tochee interface
 
 mst = cv2.imread(input_image)
 img = np.copy(mst)

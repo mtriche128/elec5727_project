@@ -1,0 +1,11 @@
+The scripts in this directory are used to analyze the dataset and plot the results.
+
+====== Setting Up the Evironment ======
+
+Before running this experiment, the libraries and associated python interfaces must be copied to this directory. This is done automatically by running the makefile.
+
+====== Usage ======
+
+$ cd elec5727_project/experiments/seq_img_tracking/analyze_data
+$ python analyze_data.py
+

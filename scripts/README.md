@@ -1,10 +1,4 @@
-Once the touchee library has been built, simply execute 'refreshlib' and the required shared object and python interface shall be copied to the script directory.
+Before the scripts can be used, the libtochee_cpu.so must be installed to this directory. To do this, simply run the Makefile.
 
-Example:
-$ cd elec5727_project
+$ cd elec5727_project/scripts
 $ make
-$ cd scripts
-$ refreshlib
-$ python symbol_detection.py input.png output.png
-
-

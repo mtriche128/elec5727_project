@@ -9,12 +9,12 @@
 import numpy as np
 import cv2
 import cv2.cv as cv
-import tochee
+import tochee_cpu
 import os
 import json
 import matplotlib.pyplot as plt
 
-ti = tochee.Tochee(5)
+ti = tochee_cpu.Tochee(2)
 dataset_path = os.path.join(os.getcwd(), "dataset") 
 dir_list = os.listdir(dataset_path) # get list of image directories
 
