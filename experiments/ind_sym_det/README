@@ -1,7 +1,0 @@
-Experiment - Individual Symbol Detection 
-
-Before running this experiment, the libraries and associated python interfaces must be copied to this directory. This is done automatically by running the makefile.
-
-To run this experiment:
-$ cd elec5727_project/experiments/ind_sym_det
-$ python ind_sym_det.py
