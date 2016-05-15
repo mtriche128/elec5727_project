@@ -1,4 +1,7 @@
 /**************************************************************************//**
+ * Matthew Triche
+ * ELEC5727
+ * Final Project
  * 
  * @file  symbol_detector.cpp
  * @brief The symbol detection kernel.

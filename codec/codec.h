@@ -1,5 +1,8 @@
 /**************************************************************************//**
- *
+ * Matthew Triche
+ * ELEC5727
+ * Final Project
+ * 
  * @file  codec.h
  * @brief Header file for the symbol codec.
  *
@@ -45,6 +48,7 @@ public:
 	~SymbolDecoder(void) { };
 
 	bool push(const int input, queue<bool> &output);
+	void reset(void);
 	
 private:
 	

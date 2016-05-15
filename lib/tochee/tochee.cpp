@@ -1,6 +1,9 @@
 /**************************************************************************//**
- *
- * @file  tochee.h
+ * Matthew Triche
+ * ELEC5727
+ * Final Project
+ * 
+ * @file  tochee.cpp
  * @brief This source file implements the Tochee Library.
  * 
  * The Tochee Library is designed to implement a visual communication xcvr.
@@ -35,6 +38,7 @@ using namespace std;
 #define _export extern "C"
 
 #define INIT_SYM 0 // define initial symbol used by the encoder
+#define EOF_SYM  40 // end-of-frame symbol
 
 /* ------------------------------------------------------------------------- *
  * Define Data                                                               *
@@ -60,6 +64,8 @@ SymbolEncoder *encoder;
 queue<bool> bitqueue;
 queue<int> symqueue;
 
+int N;
+
 /* ------------------------------------------------------------------------- *
  * Declare External Functions                                                 *
  * ------------------------------------------------------------------------- */
@@ -69,6 +75,7 @@ _export void lib_free(void);
 _export int  symdet_push(void *frame, int rows, int cols, symbol_t *p_sym);
 _export int  decoder_write(int symbol);
 _export int  decoder_size(void);
+_export void decoder_clear(void);
 _export int  decoder_read(void *buff, int size);
 _export int  encoder_write(void *buff, int size);
 _export int  encoder_read(void *buff, int size);
@@ -85,6 +92,7 @@ _export int  encoder_read(void *buff, int size);
 
 _export void lib_init(int bps)
 {
+	N = (2 << (bps-1))+1;
 	symdet  = new SymbolDetector();
 	decoder = new SymbolDecoder(bps);
 	encoder = new SymbolEncoder(bps, INIT_SYM);
@@ -123,15 +131,15 @@ _export void lib_free(void)
 
 _export int symdet_push(void *frame, int rows, int cols, symbol_t *p_sym)
 {
-	int N;
+	int M;
 	
 	Mat img(rows, cols, CV_8UC3, frame);
 	vector<Marker> markers;
 	symdet->push(img, markers);
 	
-	N = markers.size();
+	M = markers.size();
 	
-	for(int i; i < N; i++)
+	for(int i; i < M; i++)
 	{
 		p_sym->value = markers[i].number;
 		p_sym->center_row = markers[i].center.y;
@@ -146,7 +154,7 @@ _export int symdet_push(void *frame, int rows, int cols, symbol_t *p_sym)
 		p_sym++;
 	}
 	
-	return N;
+	return M;
 }
 
 /**
@@ -159,7 +167,14 @@ _export int symdet_push(void *frame, int rows, int cols, symbol_t *p_sym)
 
 _export int decoder_write(int symbol)
 {
-	if(decoder->push(symbol, bitqueue))
+	if(symbol == EOF_SYM)
+	{
+		// the end-of-frame symbol was sent
+		decoder->reset(); // reset decoder state-machine
+		return 0;
+	}
+		
+	else if(decoder->push(symbol, bitqueue))
 		return 1;
 	else
 		return 0;
@@ -215,6 +230,15 @@ _export int decoder_read(void *buff, int size)
 }
 
 /**
+ * @brief Clear the decoder's bit-queue.
+ */
+
+void decoder_clear(void)
+{
+	while(!bitqueue.empty()) bitqueue.pop(); //clear the bitqueue
+}
+
+/**
  * @brief Write a buffer of data into the encoder.
  *
  * @param buff Pointer to the data buffer.
@@ -242,7 +266,7 @@ _export int encoder_write(void *buff, int size)
 		while(b--)
 		{
 			// store the current MSb
-			if(byte & (uint8_t)0x80) bits.push(true);		
+			if(byte & (uint8_t)0x80) bits.push(true);
 			else                     bits.push(false);
 		
 			byte = byte << 1;

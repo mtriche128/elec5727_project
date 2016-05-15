@@ -1,1 +1,7 @@
 Experiment - Individual Symbol Detection 
+
+Before running this experiment, copy libtochee.so into this directory from elec5727_project/lib/tochee.
+
+To run this experiment:
+$ cd elec5727_project/experiments/ind_sym_det
+$ python ind_sym_det.py

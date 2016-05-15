@@ -1,5 +1,8 @@
 /**************************************************************************//**
- *
+ * Matthew Triche
+ * ELEC5727
+ * Final Project
+ * 
  * @file  codec.cpp
  * @brief This source file implements the symbol codec.
  *
@@ -98,6 +101,7 @@ bool SymbolDecoder::push(const int input, queue<bool> &output)
 	{
 		// the first symbol has been pushed into the state-machine
 		m_prev_sym = input;
+		return false;
 	}
 	
 	else if(m_prev_sym != input)
@@ -112,6 +116,18 @@ bool SymbolDecoder::push(const int input, queue<bool> &output)
 		// a new symbol hasn't been given, yet
 		return false;
 	}
+}
+
+/**
+ * @brief Reset the decoder state-machine.
+ *
+ * This feature is intended to help support framing. 
+ */
+
+void SymbolDecoder::reset(void)
+{
+	// indicate there is no previously sent symbol
+	m_prev_sym = -1;
 }
 
 /**

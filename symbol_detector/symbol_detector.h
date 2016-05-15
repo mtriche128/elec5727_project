@@ -1,4 +1,7 @@
  /**************************************************************************//**
+ * Matthew Triche
+ * ELEC5727
+ * Final Project
  * 
  * @file  symbol_detector.h
  * @brief Header file for the symbol detection kernel.

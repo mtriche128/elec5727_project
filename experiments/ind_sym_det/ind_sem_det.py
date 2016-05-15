@@ -1,3 +1,11 @@
+# -----------------------------------------------------------------------------
+# Matthew Triche
+# ELEC5727
+# Final Project
+#
+# Experiment - Individual Symbol Tracking
+# -----------------------------------------------------------------------------
+
 import numpy as np
 import cv2
 import cv2.cv as cv
@@ -69,7 +77,7 @@ for img_dir in dir_list:
 dist_data = dict()
 
 for result in result_list:
-	mpix = result['height']*result['width']/1e6
+	mpix = round(result['height']*result['width']/1e6,1)
 	dist = result['distance']
 	time = 1000*result['time']
 	
@@ -106,7 +114,7 @@ for result in result_list:
 	y_data.append(count)
 
 g2 = fig.add_subplot("212")
-g2.scatter(np.array(x_data),np.array(y_data))
+g2.scatter(np.array(x_data),np.array(y_data), marker='x')
 g2.set_xlabel("Distance (in)")
 g2.set_ylabel("Symbols Found")
 g2.set_title("Symbols Found vs. Distance")

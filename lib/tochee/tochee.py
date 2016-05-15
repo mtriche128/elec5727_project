@@ -1,3 +1,11 @@
+# -----------------------------------------------------------------------------
+# Matthew Triche
+# ELEC5727
+# Final Project
+#
+# This is the python interface for libtochee.so
+# -----------------------------------------------------------------------------
+
 from ctypes import *
 import array
 import os
@@ -94,8 +102,6 @@ class Tochee:
 	# True if bits were generated. False otherwise.
 	
 	def decoder_write(self, sym):
-		if sym >= self.sym_num:
-			return # erronious symbol given
 		if self.lib.decoder_write(sym) == 1:
 			return True
 		else:
@@ -132,6 +138,13 @@ class Tochee:
 		N = self.lib.decoder_read(ptr, n)
 		return buff[0:N]
 	
+	# ---------------------------------------------------------------------
+	# decoder_clear
+	#
+	# Clear the decoder's bit-queue.
+	
+	def decoder_clear(self):
+		self.lib.decoder_clear()
 		
 	# ---------------------------------------------------------------------
 	# encoder_write

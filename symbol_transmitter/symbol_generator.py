@@ -15,7 +15,7 @@ import binascii
 reference_dataset = os.path.abspath("../media")
 testfile = os.path.abspath("./test_data.txt")
 #refresh_rate = 34 #fastest usable framerate
-refresh_rate = 500
+refresh_rate = 2000
 
 #0 filled array for inserting in front of input strings
 ZEROS = "0000000000000000000000000000000000000000"
@@ -167,7 +167,7 @@ def file_input(file_name):
 def output_image_list(image_list, period):
     for image in image_list:
         image_name = str(image) + ".png"
-        file_location = reference_dataset + "\\" + image_name
+        file_location = os.path.join(reference_dataset,image_name)
         image = cv.imread(file_location, 0)   # Read the file
         # Add boarder to the image
         bordered_img = cv2.copyMakeBorder(image,200,200,200,200,cv2.BORDER_CONSTANT,value=[255,255,255])

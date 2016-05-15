@@ -8,7 +8,6 @@ EXAMPLES = examples
 SYMBOL_DETECTOR = symbol_detector
 LIB = lib
 
-#all: $(CODEC) $(EXAMPLES) $(SYMBOL_DETECTOR)
 all:
 	cd $(CODEC) && $(MAKE)
 	cd $(SYMBOL_DETECTOR) && $(MAKE)

@@ -17,6 +17,8 @@ int main(void)
 	decoder.push(1,bitqueue);
 	decoder.push(0,bitqueue);
 	
+	decoder.reset();
+	
 	while(!bitqueue.empty())
 	{
 		if(bitqueue.front())
@@ -33,7 +35,34 @@ int main(void)
 	}
 		
 	cout << endl;
+	
+	decoder.push(0,bitqueue);
+	decoder.push(1,bitqueue);
+	decoder.push(2,bitqueue);
+	decoder.push(3,bitqueue);
+	decoder.push(4,bitqueue);
+	decoder.push(3,bitqueue);
+	decoder.push(2,bitqueue);
+	decoder.push(1,bitqueue);
+	decoder.push(0,bitqueue);
 
+	while(!bitqueue.empty())
+	{
+		if(bitqueue.front())
+		{
+			cout << "1 ";
+		}
+		
+		else
+		{
+			cout << "0 ";
+		}
+		
+		bitqueue.pop();
+	}
+		
+	cout << endl;
+	
 	return 0;
 }
 
