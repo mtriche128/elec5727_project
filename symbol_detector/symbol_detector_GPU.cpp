@@ -25,7 +25,7 @@
 #include <vector>
 #include <opencv2/opencv.hpp>
 #include <opencv2/gpu/gpu.hpp>
-#include "symbol_detector.h"
+#include "symbol_detector_GPU.h"
 #include "features.h"
 using namespace std;
 using namespace cv;
@@ -90,42 +90,48 @@ SymbolDetectorGPU::~SymbolDetectorGPU(void)
  */
 void SymbolDetectorGPU::push(const Mat &input, vector<Marker> &output)
 {
+	bool debug_mode = false;
+
 	// Initialize first available GPU
-	cv.gpu.setDevice(0)
+	//cv::gpu::setDevice(0);
 	
 	int marker_size = 48;
 	//cv::Mat im_res = input.clone();
-	
+
 	//--------GPU Start----------
 	// upload image to GPU
-	cv::GpuMat gpu_input
-	gpu_input.upload(input)
+	cv::gpu::GpuMat gpu_input;
+	gpu_input.upload(input);
 	
-	/*cv::Mat im_gray;*/
-	cv::GpuMat im_gray
+	//cv::Mat im_gray;
+	cv::gpu::GpuMat im_gray_gpu;
 	
-	/*cvtColor(input,im_gray,CV_RGB2GRAY);*/
-	cv::gpu::cvtColor(gpu_input,im_gray,CV_RGB2GRAY);
+	//cvtColor(input,im_gray,CV_RGB2GRAY);
+	cv::gpu::cvtColor(gpu_input,im_gray_gpu,CV_RGB2GRAY);
 		
-	/*cv::normalize(im_gray,im_gray,0,255,cv::NORM_MINMAX, CV_8UC3);*/
-	cv::gpu::normalize(im_gray,im_gray,0,255,cv::NORM_MINMAX, CV_8UC3);
+	//cv::normalize(im_gray,im_gray,0,255,cv::NORM_MINMAX, CV_8UC3);
+	cv::gpu::normalize(im_gray_gpu,im_gray_gpu,0,255,cv::NORM_MINMAX, CV_8UC3);
 	
-	/*cv::Mat im_thresh;*/
-	cv::GpuMat gpu_im_thresh;
-	cv::gpu::threshold(im_gray,gpu_im_thresh,128,255,cv::THRESH_BINARY);
-	
+	//cv::Mat im_thresh;
+	cv::gpu::GpuMat gpu_im_thresh;
+	cv::gpu::threshold(im_gray_gpu,gpu_im_thresh,128,255,cv::THRESH_BINARY);
+
+	if(debug_mode) cout << "A part End" << endl;
 	// BOUNDRY: out_ims = im_thresh;
 	// ----------------------------------------------------------------------
 	// Find Contours
 	
 	// Pull off the CPU
 	cv::Mat im_thresh;
-	gpu_im_thresh.download(im_thresh)
+	cv::Mat im_gray;
+	gpu_im_thresh.download(im_thresh);
+	im_gray_gpu.download(im_gray);
 	//--------GPU End----------	
-	
+
 	std::vector<std::vector<cv::Point> > contours;
 	cv::findContours(im_thresh.clone(), contours, CV_RETR_LIST,CV_CHAIN_APPROX_TC89_L1);
-	
+
+	if(debug_mode) cout << "B part end" << endl;	
 	// BOUNDRY:
 	// ----------------------------------------------------------------------
 	// Process Contours
@@ -136,6 +142,7 @@ void SymbolDetectorGPU::push(const Mat &input, vector<Marker> &output)
 	std::vector<Marker> markers;
 	//TODO: GPU Accelerator candidate
 	for (int i = 0; i < contours.size(); i++){
+		if(debug_mode) cout << "start contour for" << endl;	
 		cv::approxPolyDP(
 			cv::Mat(contours[i]),
 				     approx,
@@ -156,30 +163,37 @@ void SymbolDetectorGPU::push(const Mat &input, vector<Marker> &output)
 		square_to.resize(4);
 		cv::Size winSize( 7, 7);
 		cv::Size zeroZone( -1, -1 );
+		if(debug_mode) cout << "start term crit" << endl;	
 		cv::TermCriteria criteria = cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 50, 0.0001 );
-		
+		if(debug_mode) cout << "end term crit" << endl;	
 		//TODO: Definite mulicore Accelerator candidate
 		for(int i=0;i<4;++i){square_to[i]=approx[i];}
 		/// Calculate the refined corner locations
+		if(debug_mode) cout << "start subpix" << endl;	
+
 		cv::cornerSubPix( im_gray, square_to, winSize, zeroZone, criteria );
-		
+		if(debug_mode) cout << "start perspective trans" << endl;	
 		cv::Mat affine = cv::getPerspectiveTransform(square_to,square_match);
-		
+		if(debug_mode) cout << "start GPU section 1" << endl;		
 		//--------GPU Start----------
+		cv::gpu::GpuMat gpu_im_gray;
+		gpu_im_gray.upload(im_gray);
 		// upload to GPU
-		cv::GpuMat gpu_affine
-		gpu_affine.upload(gpu_affine)
+		cv::gpu::GpuMat gpu_normalized;
 		
-		cv::GpuMat gpu_normalized;
-		/*cv::warpPerspective(input,gpu_normalized,affine,cv::Size2f(marker_size ,marker_size ));*/
-		cv::warpPerspective(gpu_input,gpu_normalized,gpu_affine,cv::Size2f(marker_size ,marker_size ));
-		cv::normalize(gpu_normalized,gpu_normalized,0,255,cv::NORM_MINMAX, CV_8UC3);
+		if(debug_mode) cout << "   * warpPerspective..." << endl;	
+		/*cv::warpPerspective(input,normalized,affine,cv::Size2f(marker_size ,marker_size ));*/
+		//cv::gpu::warpPerspective(gpu_input,gpu_normalized,affine,cv::Size2f(marker_size ,marker_size ));
+		cv::gpu::warpPerspective(gpu_im_gray,gpu_normalized,affine,cv::Size2f(marker_size ,marker_size ));
 		
+		if(debug_mode) cout << "   * normalize...";
+		//cv::gpu::normalize(gpu_normalized,gpu_normalized,0,255,cv::NORM_MINMAX, CV_8UC3);	
+	
 		// download from GPU
 		cv::Mat normalized;
-		gpu_normalized.download(normalized)
-		gpu_affine.download(affine)
+		gpu_normalized.download(normalized);
 		//--------GPU End----------	
+		if(debug_mode) cout << "end GPU section 1" << endl;	
 		
 		Marker m;
 		m.normalized=normalized;
@@ -187,7 +201,8 @@ void SymbolDetectorGPU::push(const Mat &input, vector<Marker> &output)
 		m.contour = approx;
 		m.float_contour=square_to;
 		markers.push_back(m);
-		
+	
+		if(debug_mode) cout << "end contour for" << endl;	
 		/* NOTE: Each markers[i].contour shall contain 4 points which are
 		 *       the corners of the detected markers within the frame.
 		 */
@@ -203,7 +218,8 @@ void SymbolDetectorGPU::push(const Mat &input, vector<Marker> &output)
 		}
 		*/
 	}
-	
+
+	if(debug_mode) cout << "C part end" << endl;	
 	// ----------------------------------------------------------------------
 	// Process Markers
 	
@@ -220,37 +236,61 @@ void SymbolDetectorGPU::push(const Mat &input, vector<Marker> &output)
 		out_ims = mark_gray;
 	}
 	*/
-
+	int loop_itter = 0 ;
 	for(auto&m : markers){
+
 		m.res=m.normalized;
 		std::vector<cv::Point2f> corners;
+		cv::Mat corners_mat;
 		cv::Mat mark_gray;
 		
 		//--------GPU Start----------
 		// upload to GPU
-		//normalized already on GPU
-		cv::GpuMat gpu_mark_gray
-		gpu_mark_gray.upload(mark_gray)
-		cv::GpuMat gpu_corners
-		gpu_corners.upload(corners)
+		cv::gpu::GpuMat gpu_normalized;
+		cv::gpu::GpuMat gpu_corners;
+		gpu_normalized.upload(m.res);
+		gpu_corners.upload(corners_mat);
 		
-		/* cvtColor(m.normalized,gpu_mark_gray,CV_RGB2GRAY);
-		cv::goodFeaturesToTrack(gpu_mark_gray,gpu_corners,4,0.03,10); */
-		cv::gpu::cvtColor(m.normalized,gpu_mark_gray,CV_RGB2GRAY);
-		cv::gpu::goodFeaturesToTrack(gpu_mark_gray,gpu_corners,4,0.03,10);
+		// already gray scaled. 
+		//cvtColor(m.normalized,mark_gray,CV_RGB2GRAY);
+		//cv::goodFeaturesToTrack(mark_gray,corners,4,0.03,10);
+		
+		if(debug_mode) cout << "start GoodFeaturesToTrackDetector" << endl;
+		// Mask not defined. Potential problem area. Check back here if you get poor results. 
+		cv::gpu::GoodFeaturesToTrackDetector_GPU corner_detect(4,0.03,10);
+		corner_detect(gpu_normalized,gpu_corners);
+		if(debug_mode) cout << "end GoodFeaturesToTrackDetector" << endl;
+
+
 		// download from GPU
-		gpu_corners.download(corners)
-		gpu_mark_gray.download(mark_gray)
-		//--------GPU End----------	
+		gpu_corners.download(corners_mat);
+		gpu_normalized.download(mark_gray);
 		
-		if(corners.size()==0)continue;
+		if(debug_mode){
+			cout << "Corners downloaded" << endl;
+			cout << "mark_gray downloaded" << endl;
+			cout << corners_mat << endl;
+		}
+
+		//--------GPU End----------
+
+
+		// jump out if the matrix is empty
+		if(corners_mat.empty() == true)continue;
+
+		corners = corners_mat;		
+		if(debug_mode) cout << "corners set" << endl;	
+		
+		//if(corners.size()==0)continue;
 		/// Set the needed parameters to find the refined corners
 		cv::Size winSize( 1, 1 );
 		cv::Size zeroZone( -1, -1 );
 		cv::TermCriteria criteria = cv::TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 );
 		
 		/// Calculate the refined corner locations
+		if(debug_mode) cout << "    cornerSubPix start..." << endl;
 		cv::cornerSubPix( mark_gray, corners, winSize, zeroZone, criteria );
+		if(debug_mode) cout << "    cornerSubPix end..." << endl;
 		double best_error =1e100;
 		cv::Point2f center;
 		
@@ -263,6 +303,7 @@ void SymbolDetectorGPU::push(const Mat &input, vector<Marker> &output)
 			}
 		}
 		if(best_error/marker_size>0.1)continue;
+		if(debug_mode) cout << "best error / marker size < 0.1" << endl;
 		cv::circle(m.res,center,1,cv::Scalar(0,255,0),1);
 		m.center_norm =cv::Point(marker_size*0.5,marker_size*0.5);
 		
@@ -325,6 +366,8 @@ void SymbolDetectorGPU::push(const Mat &input, vector<Marker> &output)
 			next_markers.push_back(m);
 		}
 	}
+
+	if(debug_mode) cout << "D part end" << endl;
 	
 	// Example Output
 	// if(markers.size() >= 3)
@@ -359,4 +402,6 @@ void SymbolDetectorGPU::push(const Mat &input, vector<Marker> &output)
 			output = markers;
 		}
 	}
+
+	if(debug_mode) cout << "E part end" << endl;
 }
