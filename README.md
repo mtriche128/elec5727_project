@@ -4,11 +4,11 @@
 
 To build this project, simply execute the makefile in the project's root directory.
 
-'''
+```
 $ cd elec5727_project
 $ make
 $ make install
-'''
+```
 
 ## Running Experiments
 
