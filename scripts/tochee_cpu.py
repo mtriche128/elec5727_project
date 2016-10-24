@@ -61,7 +61,7 @@ class Tochee:
 	#
 	# This is the class destructor. It's called when an instance is garbage
 	# collected by python. Before this instance is destroyed, all memory
-	# allocated within libviscom.so must be freed.
+	# allocated within libtochee.so must be freed.
 	#
 	# NOTE: This is part of managing the life-cycle of shared objects.
 	
